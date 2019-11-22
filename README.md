@@ -6,21 +6,21 @@
   <img src="https://img.shields.io/badge/miba-!mitsubachi-orange.svg?style=flat-square">
 </p>
 
-**Mitsubashi** is a tiny and open chat protocol, designed to be minimal, easy to implement,
-easy to use and easy to understand. Mitsubashi supports nicknames, nickname changing,
-user-to-user messaging and channel / group (known in Mitsubashi as "_message lists_") chat.
+**Mitsubachi** is a tiny and open chat protocol, designed to be minimal, easy to implement,
+easy to use and easy to understand. Mitsubachi supports nicknames, nickname changing,
+user-to-user messaging and channel / group (known in Mitsubachi as "_distribution lists_") chat.
 
-I designed the Mitsubashi protocol because I found that most common, open chat protocols
+I designed the Mitsubachi protocol because I found that most common, open chat protocols
 (IRC, XMPP, etc.) are to complex to implement properly and completely. Writing a very
 bare-bones IRC client is easy, but implementing the whole protocol is not. XMPP messages
 are way to heavy to be reliable on low-latency, low-bandwidth networks. The protocol is
-also very complex for an amateur, casual client / server writer to implement. Mitsubashi
+also very complex for an amateur, casual client / server writer to implement. Mitsubachi
 aims to address all these issues.
 
 ## The Protocol
 
-By default and standard, Mitsubashi servers listen for connections on **port 7107**. Clients
-connect to a server by plain socket connection.
+By default and standard, Mitsubachi servers listen for connections on **port 7107**. Clients
+(users) connect to a server by plain socket connection. 
 
 Exchange between server and client is handled via **messages**. A message is a string sent
 from a client to the server or from the server to a client. Messages have a maximum length
@@ -66,7 +66,8 @@ has no recipient) it must be filled with a single `#` character.
 nickname. When a user disconnects from the server, their nickname becomes available to be used
 by other user. Nicknames have a minimum length of **1 character** and a maximum length of
 **32 characters**. Nicknames that start with the character `!` identify **lists**. As such,
-user nicknames cannot contain this character in the first position.
+user nicknames cannot contain this character in the first position. Nicks can contain any
+character except spaces.
 
 **Lists** are lists of users. They have a nickname just like any other user, but messages sent to
 a list are sent to every member of the list. In order to be able to send a message to a list, a
@@ -74,3 +75,64 @@ user must be part of said list. When a message is sent to a list, it is broadcas
 of the list _except_ the one who sent the message. Users may join and leave lists at any time.
 When a user tries to join a non-existant list, it is created.
 
+All this said, the following messages are valid Mitsubachi messages:
+ - **NICK**: sent by a client to a server to change their nick. If the nick is in use by another client, the server should
+ reply `OOPS # # 001 #` ("nick already in use"). It the nick is available to be used, the server should reply `OOPS # # 000 #` ("ok") and assign the nick to the client.
+   - Command section value: `NICK`
+   - Sender section value: _the desired nick_
+   - Recipient section value: `#`
+   - Extradata section value: `#`
+   - Content section value: `#`
+   - Example: `NICK myNick # # #`
+ - **JOIN**: sent by a client to a server to join a list. If the nick of the list to be joined is not a valid list nick, the server should
+ reply `OOPS # # 003 #` ("invalid distribution list"). If the list is valid, the client should be joined to the list and the server should reply `OOPS # # 000 #` ("ok").
+   - Command section value: `JOIN`
+   - Sender section value: `#`
+   - Recipient section value: _nick of the list to be joined_
+   - Extradata section value: `#`
+   - Content section value: `#`
+   - Example: `JOIN # !mitsubachi # #`
+ - **LEAV**: sent by a client to a server to leave a list. If the nick of the list to be left is not a valid list nick, the server should
+ reply `OOPS # # 003 #` ("invalid distribution list"). If the list is valid, the client should be removed from the list and the server should reply `OOPS # # 000 #` ("ok").
+   - Command section value: `LEAV`
+   - Sender section value: `#`
+   - Recipient section value: _nick of the list to be left_
+   - Extradata section value: `#`
+   - Content section value: `#`
+   - Example: `LEAV # !lamelist # #`
+- **MESG**: sent by a client to a server to deliver a message to another client or list. When this
+message is sent by the server to a client it means that said client has received a message.
+   - Command section value: `MESG`
+   - Sender section value: _nick of the sender of the message_
+     - When a client is the one that sends this message to a server, it may omit the contents 
+     of this section and just send a `#` in it instead. When this message is sent by a server
+     to a client, the content of this section is always the nick of the user who sent the message
+     originally.
+   - Recipient section value: _nick of the recipient of the message (user or list)_
+   - Extradata section value: `#`
+   - Content section value: _actual contents of the message_
+   - Example: `MESG user1 coolUser # Hello there, coolUser, how are you?`
+ - **EXIT**: sent by a client to a server to close the connection.
+   - Command section value: `EXIT`
+   - Sender section value: `#`
+   - Recipient section value: `#`
+   - Extradata section value: `#`
+   - Content section value: `#`
+   - Example: `EXIT # # # #`
+ - **OOPS**: sent by a server to a client to inform the result of a requested operation. This message
+ shouldn't be sent by clients.
+   - Command section value: `OOPS`
+   - Sender section value: `#`
+   - Recipient section value: `#`
+   - Extradata section value: _error code that represents the result of the requested operation_
+   - Content section value: `#`
+   - Example: `OOPS # # 000 #`
+ - **INFO**: an information message from the server with a text message. This is supposed to be read
+ by the user. It may contain a MOTD or any valuable information the server administrator desires to
+ send clients.
+   - Command section value: `INFO`
+   - Sender section value: `#`
+   - Recipient section value: `#`
+   - Extradata section value: #
+   - Content section value: _the contents of a message_
+   - Example: `INFO # # # Welcome to Mitsubachi!`
