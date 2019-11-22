@@ -13,7 +13,7 @@ user-to-user messaging and channel / group (known in Mitsubachi as "_distributio
 I designed the Mitsubachi protocol because I found that most common, open chat protocols
 (IRC, XMPP, etc.) are to complex to implement properly and completely. Writing a very
 bare-bones IRC client is easy, but implementing the whole protocol is not. XMPP messages
-are way to heavy to be reliable on low-latency, low-bandwidth networks. The protocol is
+are way to heavy to be reliable on high-latency, low-bandwidth networks. The protocol is
 also very complex for an amateur, casual client / server writer to implement. Mitsubachi
 aims to address all these issues.
 
@@ -22,7 +22,7 @@ You may connect to a Mitsubachi server at [mitsubachi.lartu.net](http://mitsubac
 ## Protocol tl;dr
 
 ```
-Connection is done via plain sockets on port 7107.
+Connection is done via plain sockets on TCP port 7107.
 Messages between client and server are divided in 5 sections
 separated by a single space. Messages end with a \n character.
 
@@ -66,7 +66,7 @@ other than NICK.
 
 ## Protocol Details
 
-By default and standard, Mitsubachi servers listen for connections on **port 7107**. Clients
+By default and standard, Mitsubachi servers listen for connections on **TCP port 7107**. Clients
 (users) connect to a server by plain socket connection. 
 
 Exchange between server and client is handled via **messages**. A message is a string sent
