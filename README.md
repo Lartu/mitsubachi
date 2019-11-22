@@ -62,7 +62,7 @@ not chosen a nick when the server has received a command from them
 other than NICK.
 ```
 
-## The Protocol
+## Protocol Details
 
 By default and standard, Mitsubachi servers listen for connections on **port 7107**. Clients
 (users) connect to a server by plain socket connection. 
@@ -188,3 +188,22 @@ In order to request any command to a server, clients must first have chosen a ni
 they try to send any other message to the server other than a `NICK` command, the server should reply `OOPS # # 007 #` ("please log in").
 
 Should a message not in the list above be received by a server, it should reply `OOPS # # 006 #` ("unknown command").
+
+## Mitsubachi Server
+
+A Mitsubachi Server written in [LDPL](https://github.com/lartu/ldpl) is uploaded to this repository. You are allowed to
+use and modify it in any way you see fit. You are encouraged to host your own Mitsubachi servers.
+
+In order to build the server included in this repository you must run the following commands:
+
+```
+lpm install ldpl_net_server
+lpm install std-text
+ldpl mitsubachi-server.ldpl -o=mitsubachi-server
+```
+
+## License
+
+The Mitsubachi protocol is released under the MIT license and may freely reproduced and translated. The server included
+in this repository is released under the MIT license. The Mitsubachi bee logo is released under the MIT license and may
+be freely reproduced on any medium.
