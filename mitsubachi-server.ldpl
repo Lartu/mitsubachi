@@ -1,0 +1,290 @@
+# Mitsubachi Chat Protocol Server
+# By Lartu (www.lartu.net || github.com/lartu)
+
+using package ldpl_net_server
+using package std-text
+
+data:
+port                is number
+nicks_to_clients    is number map
+clients_to_nicks    is text map
+message_lists       is number list map
+
+procedure:
+sub net_new_client
+    parameters:
+        socket_number is number
+        ip is text
+        port is number
+    procedure:
+        display "A new client connected from " ip ":" port crlf
+        net send "INFO # # # Hi there! You've connected to the Mitsubachi chat server.\n" to socket_number
+end sub
+
+sub net_client_left
+    parameters:
+        socket_number is number
+        ip is text
+        port is number
+    procedure:
+        display "The client from " ip ":" port " has left :(" crlf
+end sub
+
+sub net_new_message
+    parameters:
+        socket_number is number
+        message is text
+    procedure:
+        call parseMessage with socket_number message
+end sub
+
+sub parseMessage
+    parameters:
+        socket_number       is number
+        message             is text
+    local data:
+        message_length      is number
+        command             is text
+        tokenList           is text list
+        tokenReturnCode     is number
+        nickExists          is number
+        clientIsLogged      is number
+        newMessage          is text
+        nickFirstChar       is text
+        otherSocket         is number
+        socketIndex         is number
+    procedure:
+        get length of message in message_length
+        if message_length is less than 13 then
+            # 13 is the length of the smallest
+            # possible valid message: XXXX # # # #\n
+            return
+        end if
+        substring message from 0 length 4 in command
+        call tokenizeMessage with message tokenList tokenReturnCode message_length
+        if tokenReturnCode is not equal to 0 then
+            return
+        end if
+        call verifyIfClientIsLogged with socket_number clientIsLogged
+
+        if command is equal to "NICK" then
+            shift tokenList:1 to lower case in tokenList:1
+            get character at 0 from tokenList:1 in nickFirstChar
+            if nickFirstChar is not equal to "!" then
+                call verifyNickNotInUse with tokenList:1 nickExists
+                if nickExists is equal to 1 then
+                    # Sorry that nick is in use
+                    net send "OOPS # # 001 #\n" to socket_number
+                else
+                    if clientIsLogged is equal to 1 then
+                        store 0 in nicks_to_clients:clients_to_nicks:socket_number
+                    end if
+                    store tokenList:1 in clients_to_nicks:socket_number
+                    store socket_number in nicks_to_clients:tokenList:1
+                    # Ok!
+                    net send "OOPS # # 000 #\n" to socket_number
+                    net send "INFO # # # Welcome to the Mitsubachi chat server!\n" to socket_number
+                end if
+            else
+                # Sorry, usernames cannot begin with !
+                net send "OOPS # # 002 #\n" to socket_number
+            end if
+
+        else if command is equal to "MESG" then
+            if clientIsLogged is equal to 1 then
+                call verifyNickNotInUse with tokenList:2 nickExists
+                get character at 0 from tokenList:2 in nickFirstChar
+                in newMessage join "MESG " clients_to_nicks:socket_number " " tokenList:2 " " tokenList:3 " " tokenList:4 "\n"
+                if nickFirstChar is not equal to "!" then
+                    if nickExists is equal to 1 then
+                        net send newMessage to nicks_to_clients:tokenList:2
+                    end if
+                else
+                    if nickExists is equal to 1 then
+                        # Check if the user belongs to this list
+                        call findIndexInListNumber with socket_number tokenList:2 socketIndex
+                        display "INdex" socketIndex crlf
+                        if socketIndex is not equal to -1 then
+                            for each otherSocket in message_lists:tokenList:2 do
+                                if otherSocket is not equal to socket_number then
+                                    net send newMessage to otherSocket
+                                end if
+                            repeat
+                        else
+                            # You are not a member of this list (but it exists)
+                            net send "OOPS # # 005 #\n" to socket_number
+                        end if
+                    else
+                        # You are not a member of this list (it doesn't exist)
+                        net send "OOPS # # 005 #\n" to socket_number
+                    end if
+                end if
+            else
+                # Please log in first
+                net send "OOPS # # 007 #\n" to socket_number
+            end if
+
+        else if command is equal to "JOIN" then
+            shift tokenList:2 to lower case in tokenList:2
+            get character at 0 from tokenList:2 in nickFirstChar
+            if nickFirstChar is equal to "!" then
+                call verifyNickNotInUse with tokenList:2 nickExists
+                if nickExists is equal to 1 then
+                    # If the list already exists
+                    push socket_number to message_lists:tokenList:2
+                    # Ok!
+                    net send "OOPS # # 000 #\n" to socket_number
+                else
+                    # If the list doesn't exist
+                    store -1 in nicks_to_clients:tokenList:2
+                    push socket_number to message_lists:tokenList:2
+                    net send "OOPS # # 000 #\n" to socket_number
+                end if
+            else
+                # Sorry, distribution list names must begin with !
+                net send "OOPS # # 003 #\n" to socket_number
+            end if
+
+        else if command is equal to "LEAV" then
+            shift tokenList:2 to lower case in tokenList:2
+            get character at 0 from tokenList:2 in nickFirstChar
+            if nickFirstChar is equal to "!" then
+                call verifyNickNotInUse with tokenList:2 nickExists
+                if nickExists is equal to 1 then
+                    # If the list already exists
+                    call removeElementFromList with tokenList:2 socket_number
+                    # Ok!
+                    net send "OOPS # # 000 #\n" to socket_number
+                else
+                    # If the list doesn't exist
+                    net send "OOPS # # 000 #\n" to socket_number
+                end if
+            else
+                # Sorry, distribution list names must begin with !
+                net send "OOPS # # 003 #\n" to socket_number
+            end if
+
+        else if command is equal to "EXIT" then
+            # Bye!
+            net kick client socket_number
+
+        else
+            # Oops! I didn't get what you were asking me to do.
+            net send "OOPS # # 006 #\n" to socket_number
+        end if
+end sub
+
+sub tokenizeMessage
+    parameters:
+        message             is text
+        tokenList           is text list
+        returnCode          is number
+        message_length      is number
+    local data:
+        localMessage        is text
+        spaceCount          is number
+        spaceIndex          is number
+        token               is text
+        i                   is number
+    procedure:
+        trim message in localMessage
+        count " " from localMessage in spaceCount
+        if spaceCount is less than 4 then
+            store 1 in returnCode
+            return
+        end if
+        for i from 0 to 4 step 1 do
+            get index of " " from localMessage in spaceIndex
+            substring localMessage from 0 length spaceIndex in token
+            push token to tokenList
+            in spaceIndex solve spaceIndex + 1
+            substring localMessage from spaceIndex length message_length in localMessage
+        repeat
+        push localMessage to tokenList
+        for each token in tokenList do
+            display "Token: " token crlf
+        repeat
+end sub
+
+sub findIndexInListText
+    parameters:
+        element             is text
+        _list               is text list
+        index               is number
+    local data:
+        i                   is number
+        len                 is number
+    procedure:
+        get length of _list in len
+        for i from 0 to len step 1 do
+            if _list:i is equal to element then
+                store i in index
+                return
+            end if
+        repeat
+        store -1 in index
+end sub
+create statement "get index of $ from $ in $" executing findIndexInListText
+
+sub findIndexInListNumber
+    parameters:
+        element             is number
+        listName            is text
+        index               is number
+    local data:
+        i                   is number
+        len                 is number
+    procedure:
+        get length of message_lists:listName in len
+        for i from 0 to len step 1 do
+            if message_lists:listName:i is equal to element then
+                store i in index
+                return
+            end if
+        repeat
+        store -1 in index
+end sub
+
+sub verifyNickNotInUse
+    parameters:
+        nick                is text
+        inUse               is number
+    procedure:
+        if nicks_to_clients:nick is not equal to 0 then
+            store 1 in inUse
+        else
+            store 0 in inUse
+        end if
+end sub
+
+sub verifyIfClientIsLogged
+    parameters:
+        clientNumber        is number
+        clientIsLogged      is number
+    procedure:
+        if clients_to_nicks:clientNumber is not equal to "" then
+            store 1 in clientIsLogged
+        else
+            store 0 in clientIsLogged
+        end if
+end sub
+
+sub removeElementFromList
+parameters:
+    listName is text
+    element is number
+local data:
+    newList is number list
+    num is number
+procedure:
+    for each num in message_lists:listName do
+        if num is not equal to element then
+            push num to newList
+        end if
+    repeat
+    copy newList to message_lists:listName
+end sub
+
+store 7107 in port
+display "Mitsubachi Server listening on port " port " 🐝" crlf
+NET LISTEN ON 7107
