@@ -92,6 +92,7 @@ sub parseMessage
 
         else if command is equal to "MESG" then
             if clientIsLogged is equal to 1 then
+                shift tokenList:2 to lower case in tokenList:2
                 call verifyNickNotInUse with tokenList:2 nickExists
                 get character at 0 from tokenList:2 in nickFirstChar
                 in newMessage join "MESG " clients_to_nicks:socket_number " " tokenList:2 " " tokenList:3 " " tokenList:4 "\n"
