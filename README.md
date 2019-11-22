@@ -136,3 +136,8 @@ message is sent by the server to a client it means that said client has received
    - Extradata section value: #
    - Content section value: _the contents of a message_
    - Example: `INFO # # # Welcome to Mitsubachi!`
+
+In order to request any command to a server, clients must first have chosen a nick (by issuing a `NICK` message). Should
+they try to send any other message to the server other than a `NICK` command, the server should reply `OOPS # # 007 #` ("please log in").
+
+Should a message not in the list above be received by a server, it should reply `OOPS # # 006 #` ("unknown command").
