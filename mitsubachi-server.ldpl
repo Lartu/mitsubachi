@@ -26,7 +26,7 @@ sub net_client_left
         ip is text
         port is number
     procedure:
-        # nothing!
+        call disconnectUser with socket_number
 end sub
 
 sub net_new_message
@@ -167,7 +167,7 @@ sub parseMessage
         else if command is equal to "EXIT" then
             # Bye!
             net kick client socket_number
-
+            call disconnectUser with socket_number
         else
             # Oops! I didn't get what you were asking me to do.
             net send "OOPS # # 006 #\n" to socket_number
@@ -283,6 +283,19 @@ procedure:
         end if
     repeat
     copy newList to message_lists:listName
+end sub
+
+sub disconnectUser
+parameters:
+    socket_number is number
+local data:
+    clientIsLogged is number
+procedure:
+    call verifyIfClientIsLogged with socket_number clientIsLogged
+    if clientIsLogged is equal to 1 then
+        store 0 in nicks_to_clients:clients_to_nicks:socket_number
+        store "" in clients_to_nicks:socket_number
+    end if
 end sub
 
 store 7107 in port
