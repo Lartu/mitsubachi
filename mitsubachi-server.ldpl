@@ -17,7 +17,6 @@ sub net_new_client
         ip is text
         port is number
     procedure:
-        display "A new client connected from " ip ":" port crlf
         net send "INFO # # # Hi there! You've connected to the Mitsubachi chat server.\n" to socket_number
 end sub
 
@@ -27,7 +26,7 @@ sub net_client_left
         ip is text
         port is number
     procedure:
-        display "The client from " ip ":" port " has left :(" crlf
+        # nothing!
 end sub
 
 sub net_new_message
