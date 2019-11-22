@@ -17,6 +17,51 @@ are way to heavy to be reliable on low-latency, low-bandwidth networks. The prot
 also very complex for an amateur, casual client / server writer to implement. Mitsubachi
 aims to address all these issues.
 
+## Protocol tl;dr
+
+```
+Connection is done via plain sockets on port 7107.
+Messages between client and server are divided in 5 sections
+separated by a single space. Messages end with a \n character.
+
+(Message format)
++---------+------------+------------+-----------+----------+
+| command |   sender   | recipient  | extradata | content  |
++---------+------------+------------+-----------+----------+
+| 4 chars | 1-32 chars | 1-32 chars | >1 chars  | >1 chars |
++---------+------------+------------+-----------+----------+
+
+All clients and lists have a nick that identifies them. Nicks
+are unique. List nicks begin with the character !.
+
+Clients may join and leave lists. Messages sent to a client
+are delivered to that client. Messages sent to lists are sent
+to every client on that list.
+
+Valid commands:
+> 'NICK <nick> # # #\n' used to change your nick
+> 'JOIN # <list_nick> # #\n' used to join a list
+> 'LEAV # <list_nick> # #\n' used to leave a list
+> 'MESG <sender_nick> <recipient_nick> # <content>\n' used to
+  send an actual message (for example <content> = Hi there!)
+> 'EXIT # # # #\n' used to close the connection (sent by clients)
+> 'OOPS # # <error_code> #\n' used to tell a client the result of
+  an operation (sent by servers).
+> 'INFO # # # <content>\n' used by servers to send text messages
+  to clients.
+  
+Error codes:
+A server should reply then 000 ("ok") when a client changes success-
+fully their nick. Otherwise it should reply 001 ("nick already in
+use") or 002 ("invalid nick", for nicks beginning in !). 003 should
+be sent when trying to join an invalid list (using a client nick).
+005 should be sent when a client tries to send a message to a list
+they are not members of. 006 should be sent when an invalid command
+is received by the server. 007 should be sent to clients that have
+not chosen a nick when the server has received a command from them
+other than NICK.
+```
+
 ## The Protocol
 
 By default and standard, Mitsubachi servers listen for connections on **port 7107**. Clients
@@ -62,6 +107,8 @@ a message (_"hi there!"_, _"how are you?"_).
 When a section is supposed to be empty (for example, when sending a message to the server that
 has no recipient) it must be filled with a single `#` character.
 
+The minimum length of any message is 13: `XXXX # # # #\n".
+
 **Nicks** identify users. Each user has a nick (or nickname) and no two users can have the same
 nickname. When a user disconnects from the server, their nickname becomes available to be used
 by other user. Nicknames have a minimum length of **1 character** and a maximum length of
@@ -71,9 +118,9 @@ character except spaces.
 
 **Lists** are lists of users. They have a nickname just like any other user, but messages sent to
 a list are sent to every member of the list. In order to be able to send a message to a list, a
-user must be part of said list. When a message is sent to a list, it is broadcast to every member
+client must be part of said list (otherwise error message 005 ("you are not a member of this list") should be sent to the client). When a message is sent to a list, it is broadcast to every member
 of the list _except_ the one who sent the message. Users may join and leave lists at any time.
-When a user tries to join a non-existant list, it is created.
+When a client tries to join a non-existant list, it is created.
 
 All this said, the following messages are valid Mitsubachi messages:
  - **NICK**: sent by a client to a server to change their nick. If the nick is in use by another client, the server should
