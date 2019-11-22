@@ -103,7 +103,6 @@ sub parseMessage
                     if nickExists is equal to 1 then
                         # Check if the user belongs to this list
                         call findIndexInListNumber with socket_number tokenList:2 socketIndex
-                        display "INdex" socketIndex crlf
                         if socketIndex is not equal to -1 then
                             for each otherSocket in message_lists:tokenList:2 do
                                 if otherSocket is not equal to socket_number then
@@ -201,9 +200,6 @@ sub tokenizeMessage
             substring localMessage from spaceIndex length message_length in localMessage
         repeat
         push localMessage to tokenList
-        for each token in tokenList do
-            display "Token: " token crlf
-        repeat
 end sub
 
 sub findIndexInListText
