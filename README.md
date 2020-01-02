@@ -11,7 +11,7 @@ easy to use and easy to understand. Mitsubachi supports nicknames, nickname chan
 user-to-user messaging and channel / group (known in Mitsubachi as "_distribution lists_") chat.
 
 I designed the Mitsubachi protocol because I found that most common, open chat protocols
-(IRC, XMPP, etc.) are to complex to implement properly and completely. Writing a very
+(IRC, XMPP, etc.) are to complex too implement properly and completely. Writing a very
 bare-bones IRC client is easy, but implementing the whole protocol is not. XMPP messages
 are way to heavy to be reliable on high-latency, low-bandwidth networks. The protocol is
 also very complex for an amateur, casual client / server writer to implement. Mitsubachi
