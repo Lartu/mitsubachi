@@ -17,8 +17,6 @@ are way to heavy to be reliable on high-latency, low-bandwidth networks. The pro
 also very complex for an amateur, casual client / server writer to implement. Mitsubachi
 aims to address all these issues.
 
-You may connect to a Mitsubachi server at [mitsubachi.lartu.net](http://mitsubachi.lartu.net) port 7107.
-
 ## Protocol tl;dr
 
 ```
